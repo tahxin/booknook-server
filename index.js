@@ -5,12 +5,14 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { MongoClient, ObjectId } from "mongodb";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 
 // ==========================================
 // 2. Config constants
 // ==========================================
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.DB_NAME || "booknook";
+const BETTER_AUTH_URL = (process.env.BETTER_AUTH_URL || "http://localhost:3000").replace(/\/$/, "");
 
 const rawOrigins = (process.env.CLIENT_ORIGIN || "")
   .split(",")
@@ -18,6 +20,17 @@ const rawOrigins = (process.env.CLIENT_ORIGIN || "")
   .filter(Boolean);
 
 const allowedOrigins = Array.from(new Set(["http://localhost:3000", ...rawOrigins]));
+
+// ==========================================
+// 3. HttpError class
+// ==========================================
+export class HttpError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+    this.name = "HttpError";
+  }
+}
 
 // ==========================================
 // 4. Mongo connection (cached client) and ensureIndexes
@@ -55,6 +68,39 @@ export async function getDb() {
   const db = client.db(DB_NAME);
   await ensureIndexes(db);
   return db;
+}
+
+// ==========================================
+// 5. verifyJwt middleware
+// ==========================================
+const JWKS = createRemoteJWKSet(new URL(`${BETTER_AUTH_URL}/api/auth/jwks`));
+
+export async function verifyJwt(req, _res, next) {
+  try {
+    const header = req.headers.authorization || "";
+    const [scheme, token] = header.split(" ");
+    if (scheme !== "Bearer" || !token) {
+      throw new HttpError(401, "Missing access token");
+    }
+
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: BETTER_AUTH_URL,
+      audience: BETTER_AUTH_URL,
+    });
+
+    if (!payload.email) {
+      throw new HttpError(401, "Token has no email");
+    }
+
+    req.user = {
+      id: payload.sub ?? payload.id,
+      email: payload.email,
+      name: payload.name ?? "",
+    };
+    next();
+  } catch (err) {
+    next(err instanceof HttpError ? err : new HttpError(401, "Invalid or expired token"));
+  }
 }
 
 // ==========================================
