@@ -25,3 +25,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform formatting consistency with `.editorconfig`.
 - GitHub Actions automated CI testing workflow.
 - Interactive `requests.http` REST testing file.
+
