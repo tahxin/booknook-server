@@ -481,6 +481,37 @@ app.get(
   })
 );
 
+// 8. DELETE /borrows/:id (JWT)
+app.delete(
+  "/borrows/:id",
+  verifyJwt,
+  asyncHandler(async (req, res) => {
+    const objectId = parseObjectId(req.params.id, "borrow");
+    const db = await getDb();
+
+    const borrow = await db.collection("borrows").findOne({ _id: objectId });
+    if (!borrow) {
+      throw new HttpError(404, "Borrow not found");
+    }
+
+    if (borrow.userEmail !== req.user.email) {
+      throw new HttpError(403, "You can only return your own borrows");
+    }
+
+    const deleteResult = await db.collection("borrows").deleteOne({ _id: objectId });
+    if (deleteResult.deletedCount === 1) {
+      if (ObjectId.isValid(borrow.bookId)) {
+        await db.collection("books").updateOne(
+          { _id: new ObjectId(borrow.bookId) },
+          { $inc: { availableCopies: 1 } }
+        );
+      }
+    }
+
+    res.json({ message: "Book returned" });
+  })
+);
+
 // ==========================================
 // 9. notFound and errorHandler
 // ==========================================
