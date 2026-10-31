@@ -169,6 +169,22 @@ app.get(
       query.category = req.query.category;
     }
 
+    // Search filter (title or author, escaped regex)
+    if (req.query.search) {
+      const sanitized = escapeRegex(req.query.search.trim());
+      if (sanitized) {
+        query.$or = [
+          { title: { $regex: sanitized, $options: "i" } },
+          { author: { $regex: sanitized, $options: "i" } },
+        ];
+      }
+    }
+
+    // Owner email filter
+    if (req.query.ownerEmail) {
+      query.ownerEmail = req.query.ownerEmail.trim();
+    }
+
     // Limit filter
     let limit = 0;
     if (req.query.limit !== undefined) {
@@ -179,7 +195,7 @@ app.get(
       limit = parsedLimit;
     }
 
-    // Sort order: newest first
+    // Sort order: default is newest first
     const sort = { createdAt: -1 };
 
     let cursor = db.collection("books").find(query).sort(sort);
