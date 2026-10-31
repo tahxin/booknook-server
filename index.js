@@ -36,10 +36,15 @@ export class HttpError extends Error {
 }
 
 export function parseObjectId(id, entityName = "book") {
-  if (!id || typeof id !== "string" || !ObjectId.isValid(id) || String(new ObjectId(id)) !== String(id)) {
+  if (
+    !id ||
+    typeof id !== "string" ||
+    !/^[0-9a-fA-F]{24}$/.test(id.trim()) ||
+    !ObjectId.isValid(id.trim())
+  ) {
     throw new HttpError(400, `Invalid ${entityName} id`);
   }
-  return new ObjectId(id);
+  return new ObjectId(id.trim());
 }
 
 export function escapeRegex(text) {
