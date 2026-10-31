@@ -363,6 +363,33 @@ app.patch(
   })
 );
 
+// 5. DELETE /books/:id (JWT)
+app.delete(
+  "/books/:id",
+  verifyJwt,
+  asyncHandler(async (req, res) => {
+    const objectId = parseObjectId(req.params.id, "book");
+    const db = await getDb();
+
+    const book = await db.collection("books").findOne({ _id: objectId });
+    if (!book) {
+      throw new HttpError(404, "Book not found");
+    }
+
+    if (book.ownerEmail !== req.user.email) {
+      throw new HttpError(403, "You can only delete your own books");
+    }
+
+    const borrowedCount = await db.collection("borrows").countDocuments({ bookId: String(objectId) });
+    if (borrowedCount > 0) {
+      throw new HttpError(409, "This book has active borrows and cannot be deleted");
+    }
+
+    await db.collection("books").deleteOne({ _id: objectId });
+    res.json({ message: "Book deleted" });
+  })
+);
+
 // ==========================================
 // 9. notFound and errorHandler
 // ==========================================
