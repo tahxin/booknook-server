@@ -466,6 +466,21 @@ app.post(
   })
 );
 
+// 7. GET /borrows (JWT)
+app.get(
+  "/borrows",
+  verifyJwt,
+  asyncHandler(async (req, res) => {
+    const db = await getDb();
+    const borrows = await db
+      .collection("borrows")
+      .find({ userEmail: req.user.email })
+      .sort({ borrowDate: -1 })
+      .toArray();
+    res.json(borrows);
+  })
+);
+
 // ==========================================
 // 9. notFound and errorHandler
 // ==========================================
