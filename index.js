@@ -208,6 +208,21 @@ app.get(
   })
 );
 
+// 2. GET /books/:id (JWT)
+app.get(
+  "/books/:id",
+  verifyJwt,
+  asyncHandler(async (req, res) => {
+    const objectId = parseObjectId(req.params.id, "book");
+    const db = await getDb();
+    const book = await db.collection("books").findOne({ _id: objectId });
+    if (!book) {
+      throw new HttpError(404, "Book not found");
+    }
+    res.json(book);
+  })
+);
+
 // ==========================================
 // 9. notFound and errorHandler
 // ==========================================
