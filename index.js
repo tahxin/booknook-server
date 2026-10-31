@@ -446,9 +446,23 @@ app.post(
       returnDate,
     };
 
-    const result = await db.collection("borrows").insertOne(borrowDoc);
-    const createdBorrow = await db.collection("borrows").findOne({ _id: result.insertedId });
-    res.status(201).json(createdBorrow);
+    let insertedBorrow;
+    try {
+      const result = await db.collection("borrows").insertOne(borrowDoc);
+      insertedBorrow = await db.collection("borrows").findOne({ _id: result.insertedId });
+    } catch (insertErr) {
+      // Roll back the copy on duplicate race or failure
+      await db.collection("books").updateOne(
+        { _id: objectId },
+        { $inc: { availableCopies: 1 } }
+      );
+      if (insertErr.code === 11000) {
+        throw new HttpError(409, "You have already borrowed this book");
+      }
+      throw insertErr;
+    }
+
+    res.status(201).json(insertedBorrow);
   })
 );
 
