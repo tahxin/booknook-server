@@ -24,6 +24,11 @@ const rawOrigins = (process.env.CLIENT_ORIGIN || "")
 
 const allowedOrigins = Array.from(new Set(["http://localhost:3000", ...rawOrigins]));
 
+// Startup environment configuration warning
+if (!MONGODB_URI && !process.env.VERCEL && process.env.NODE_ENV !== "test") {
+  console.warn("⚠️ [BookNook Server] Warning: MONGODB_URI is not set in environment.");
+}
+
 // ==========================================
 // 3. HttpError class and small helpers
 // ==========================================
