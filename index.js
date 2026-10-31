@@ -1,15 +1,9 @@
-// ==========================================
-// 1. Imports and dotenv/config
-// ==========================================
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { MongoClient, ObjectId } from "mongodb";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
-// ==========================================
-// 2. Config constants
-// ==========================================
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.DB_NAME || "booknook";
 const BETTER_AUTH_URL = (process.env.BETTER_AUTH_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -24,14 +18,10 @@ const rawOrigins = (process.env.CLIENT_ORIGIN || "")
 
 const allowedOrigins = Array.from(new Set(["http://localhost:3000", ...rawOrigins]));
 
-// Startup environment configuration warning
 if (!MONGODB_URI && !process.env.VERCEL && process.env.NODE_ENV !== "test") {
   console.warn("⚠️ [BookNook Server] Warning: MONGODB_URI is not set in environment.");
 }
 
-// ==========================================
-// 3. HttpError class and small helpers
-// ==========================================
 export class HttpError extends Error {
   constructor(status, message) {
     super(message);
@@ -111,9 +101,6 @@ export const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-// ==========================================
-// 4. Mongo connection (cached client) and ensureIndexes
-// ==========================================
 let clientPromise = null;
 let indexesPromise = null;
 
@@ -149,9 +136,6 @@ export async function getDb() {
   return db;
 }
 
-// ==========================================
-// 5. verifyJwt middleware
-// ==========================================
 const JWKS = createRemoteJWKSet(new URL(`${BETTER_AUTH_URL}/api/auth/jwks`));
 
 export async function verifyJwt(req, _res, next) {
@@ -182,13 +166,9 @@ export async function verifyJwt(req, _res, next) {
   }
 }
 
-// ==========================================
-// 6. App creation, CORS, JSON parser
-// ==========================================
 const app = express();
 app.disable("x-powered-by");
 
-// Security headers (lightweight protection without external helmet dependency)
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
@@ -196,7 +176,6 @@ app.use((_req, res, next) => {
   next();
 });
 
-// Request timing and development logging
 app.use((req, res, next) => {
   const start = Date.now();
   res.on("finish", () => {
@@ -226,23 +205,16 @@ app.use(
 
 app.use(express.json({ limit: "100kb" }));
 
-// Sanity route
 app.get("/", (_req, res) => {
   res.json({ message: "BookNook API is running" });
 });
 
-// ==========================================
-// 7. Books routes
-// ==========================================
-
-// 1. GET /books (public)
 app.get(
   "/books",
   asyncHandler(async (req, res) => {
     const db = await getDb();
     const query = {};
 
-    // Category filter
     if (req.query.category) {
       if (!ALLOWED_CATEGORIES.includes(req.query.category)) {
         throw new HttpError(400, "Invalid category");
@@ -250,7 +222,6 @@ app.get(
       query.category = req.query.category;
     }
 
-    // Search filter (title or author, escaped regex)
     if (req.query.search) {
       const sanitized = escapeRegex(req.query.search.trim());
       if (sanitized) {
@@ -261,12 +232,10 @@ app.get(
       }
     }
 
-    // Owner email filter
     if (req.query.ownerEmail) {
       query.ownerEmail = req.query.ownerEmail.trim();
     }
 
-    // Limit filter
     let limit = 0;
     if (req.query.limit !== undefined) {
       const parsedLimit = parseInt(req.query.limit, 10);
@@ -276,7 +245,6 @@ app.get(
       limit = parsedLimit;
     }
 
-    // Sort order: default is newest first
     const sort = { createdAt: -1 };
 
     let cursor = db.collection("books").find(query).sort(sort);
@@ -289,7 +257,6 @@ app.get(
   })
 );
 
-// 2. GET /books/:id (JWT)
 app.get(
   "/books/:id",
   verifyJwt,
@@ -304,7 +271,6 @@ app.get(
   })
 );
 
-// 3. POST /books (JWT)
 app.post(
   "/books",
   verifyJwt,
@@ -333,7 +299,6 @@ app.post(
   })
 );
 
-// 4. PATCH /books/:id (JWT)
 app.patch(
   "/books/:id",
   verifyJwt,
@@ -393,7 +358,6 @@ app.patch(
   })
 );
 
-// 5. DELETE /books/:id (JWT)
 app.delete(
   "/books/:id",
   verifyJwt,
@@ -420,11 +384,6 @@ app.delete(
   })
 );
 
-// ==========================================
-// 8. Borrows routes
-// ==========================================
-
-// 6. POST /borrows (JWT)
 app.post(
   "/borrows",
   verifyJwt,
@@ -439,7 +398,6 @@ app.post(
     const userEmail = req.user.email;
     const userName = req.user.name || "";
 
-    // Check if user already borrowed this book
     const existingBorrow = await db.collection("borrows").findOne({
       bookId: String(objectId),
       userEmail,
@@ -448,7 +406,6 @@ app.post(
       throw new HttpError(409, "You have already borrowed this book");
     }
 
-    // Atomically decrement copy
     const book = await db.collection("books").findOneAndUpdate(
       { _id: objectId, availableCopies: { $gt: 0 } },
       { $inc: { availableCopies: -1 } },
@@ -481,7 +438,6 @@ app.post(
       const result = await db.collection("borrows").insertOne(borrowDoc);
       insertedBorrow = await db.collection("borrows").findOne({ _id: result.insertedId });
     } catch (insertErr) {
-      // Roll back the copy on duplicate race or failure
       await db.collection("books").updateOne(
         { _id: objectId },
         { $inc: { availableCopies: 1 } }
@@ -496,7 +452,6 @@ app.post(
   })
 );
 
-// 7. GET /borrows (JWT)
 app.get(
   "/borrows",
   verifyJwt,
@@ -511,7 +466,6 @@ app.get(
   })
 );
 
-// 8. DELETE /borrows/:id (JWT)
 app.delete(
   "/borrows/:id",
   verifyJwt,
@@ -542,9 +496,6 @@ app.delete(
   })
 );
 
-// ==========================================
-// 9. notFound and errorHandler
-// ==========================================
 app.use((_req, _res, next) => {
   next(new HttpError(404, "Route not found"));
 });
@@ -563,9 +514,6 @@ app.use((err, _req, res, _next) => {
   return res.status(500).json({ message: "Something went wrong" });
 });
 
-// ==========================================
-// 10. Export default app and local listen
-// ==========================================
 export default app;
 
 if (!process.env.VERCEL && process.env.NODE_ENV !== "test") {
