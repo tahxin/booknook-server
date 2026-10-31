@@ -4,16 +4,37 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { MongoClient, ObjectId } from "mongodb";
 
 // ==========================================
 // 2. Config constants
 // ==========================================
+const MONGODB_URI = process.env.MONGODB_URI;
+const DB_NAME = process.env.DB_NAME || "booknook";
+
 const rawOrigins = (process.env.CLIENT_ORIGIN || "")
   .split(",")
   .map((o) => o.trim().replace(/\/$/, ""))
   .filter(Boolean);
 
 const allowedOrigins = Array.from(new Set(["http://localhost:3000", ...rawOrigins]));
+
+// ==========================================
+// 4. Mongo connection (cached client)
+// ==========================================
+let clientPromise = null;
+
+export async function getDb() {
+  if (!MONGODB_URI) {
+    throw new Error("Missing MONGODB_URI environment variable");
+  }
+  if (!clientPromise) {
+    const client = new MongoClient(MONGODB_URI);
+    clientPromise = client.connect();
+  }
+  const client = await clientPromise;
+  return client.db(DB_NAME);
+}
 
 // ==========================================
 // 6. App creation, CORS, JSON parser
