@@ -151,6 +151,48 @@ app.get("/", (_req, res) => {
 });
 
 // ==========================================
+// 7. Books routes
+// ==========================================
+
+// 1. GET /books (public)
+app.get(
+  "/books",
+  asyncHandler(async (req, res) => {
+    const db = await getDb();
+    const query = {};
+
+    // Category filter
+    if (req.query.category) {
+      if (!ALLOWED_CATEGORIES.includes(req.query.category)) {
+        throw new HttpError(400, "Invalid category");
+      }
+      query.category = req.query.category;
+    }
+
+    // Limit filter
+    let limit = 0;
+    if (req.query.limit !== undefined) {
+      const parsedLimit = parseInt(req.query.limit, 10);
+      if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100) {
+        throw new HttpError(400, "Limit must be an integer between 1 and 100");
+      }
+      limit = parsedLimit;
+    }
+
+    // Sort order: newest first
+    const sort = { createdAt: -1 };
+
+    let cursor = db.collection("books").find(query).sort(sort);
+    if (limit > 0) {
+      cursor = cursor.limit(limit);
+    }
+
+    const books = await cursor.toArray();
+    res.json(books);
+  })
+);
+
+// ==========================================
 // 9. notFound and errorHandler
 // ==========================================
 app.use((_req, _res, next) => {
