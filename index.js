@@ -3,12 +3,41 @@
 // ==========================================
 import "dotenv/config";
 import express from "express";
+import cors from "cors";
 
 // ==========================================
-// 6. App creation
+// 2. Config constants
+// ==========================================
+const rawOrigins = (process.env.CLIENT_ORIGIN || "")
+  .split(",")
+  .map((o) => o.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+const allowedOrigins = Array.from(new Set(["http://localhost:3000", ...rawOrigins]));
+
+// ==========================================
+// 6. App creation, CORS, JSON parser
 // ==========================================
 const app = express();
 app.disable("x-powered-by");
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const normalized = origin.replace(/\/$/, "");
+      if (allowedOrigins.includes(normalized)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: "100kb" }));
 
 // Sanity route
 app.get("/", (_req, res) => {
