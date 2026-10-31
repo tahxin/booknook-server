@@ -391,6 +391,68 @@ app.delete(
 );
 
 // ==========================================
+// 8. Borrows routes
+// ==========================================
+
+// 6. POST /borrows (JWT)
+app.post(
+  "/borrows",
+  verifyJwt,
+  asyncHandler(async (req, res) => {
+    const { bookId } = req.body || {};
+    if (!bookId) {
+      throw new HttpError(400, "Book id is required");
+    }
+
+    const objectId = parseObjectId(bookId, "book");
+    const db = await getDb();
+    const userEmail = req.user.email;
+    const userName = req.user.name || "";
+
+    // Check if user already borrowed this book
+    const existingBorrow = await db.collection("borrows").findOne({
+      bookId: String(objectId),
+      userEmail,
+    });
+    if (existingBorrow) {
+      throw new HttpError(409, "You have already borrowed this book");
+    }
+
+    // Atomically decrement copy
+    const book = await db.collection("books").findOneAndUpdate(
+      { _id: objectId, availableCopies: { $gt: 0 } },
+      { $inc: { availableCopies: -1 } },
+      { returnDocument: "after" }
+    );
+
+    if (!book) {
+      const existingBook = await db.collection("books").findOne({ _id: objectId });
+      if (!existingBook) {
+        throw new HttpError(404, "Book not found");
+      }
+      throw new HttpError(400, "No copies available");
+    }
+
+    const now = new Date();
+    const returnDate = new Date(now.getTime() + BORROW_DAYS * 24 * 60 * 60 * 1000);
+
+    const borrowDoc = {
+      bookId: String(objectId),
+      bookTitle: book.title,
+      bookImage: book.image,
+      userEmail,
+      userName,
+      borrowDate: now,
+      returnDate,
+    };
+
+    const result = await db.collection("borrows").insertOne(borrowDoc);
+    const createdBorrow = await db.collection("borrows").findOne({ _id: result.insertedId });
+    res.status(201).json(createdBorrow);
+  })
+);
+
+// ==========================================
 // 9. notFound and errorHandler
 // ==========================================
 app.use((_req, _res, next) => {
