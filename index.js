@@ -303,6 +303,66 @@ app.post(
   })
 );
 
+// 4. PATCH /books/:id (JWT)
+app.patch(
+  "/books/:id",
+  verifyJwt,
+  asyncHandler(async (req, res) => {
+    const objectId = parseObjectId(req.params.id, "book");
+    const db = await getDb();
+
+    const book = await db.collection("books").findOne({ _id: objectId });
+    if (!book) {
+      throw new HttpError(404, "Book not found");
+    }
+
+    if (book.ownerEmail !== req.user.email) {
+      throw new HttpError(403, "You can only edit your own books");
+    }
+
+    const { title, author, category, image, description, totalCopies } = req.body || {};
+    const updateData = {};
+
+    if (title !== undefined) updateData.title = title;
+    if (author !== undefined) updateData.author = author;
+    if (category !== undefined) updateData.category = category;
+    if (image !== undefined) updateData.image = image;
+    if (description !== undefined) updateData.description = description;
+    if (totalCopies !== undefined) updateData.totalCopies = totalCopies;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.json(book);
+    }
+
+    validateBookFields(updateData, true);
+
+    const setFields = {};
+    if (updateData.title !== undefined) setFields.title = updateData.title.trim();
+    if (updateData.author !== undefined) setFields.author = updateData.author.trim();
+    if (updateData.category !== undefined) setFields.category = updateData.category;
+    if (updateData.image !== undefined) setFields.image = updateData.image.trim();
+    if (updateData.description !== undefined) setFields.description = updateData.description.trim();
+
+    if (updateData.totalCopies !== undefined) {
+      const newTotal = parseInt(updateData.totalCopies, 10);
+      const borrowedCount = await db.collection("borrows").countDocuments({ bookId: String(objectId) });
+      if (newTotal < borrowedCount) {
+        throw new HttpError(400, "Total copies cannot be lower than copies currently borrowed");
+      }
+      setFields.totalCopies = newTotal;
+      setFields.availableCopies = newTotal - borrowedCount;
+    }
+
+    const updated = await db.collection("books").findOneAndUpdate(
+      { _id: objectId },
+      { $set: setFields },
+      { returnDocument: "after" }
+    );
+
+    res.json(updated);
+  })
+);
+
 // ==========================================
 // 9. notFound and errorHandler
 // ==========================================
