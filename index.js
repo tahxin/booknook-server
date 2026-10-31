@@ -560,7 +560,26 @@ export default app;
 
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`BookNook API running on port ${PORT}`);
   });
+
+  const handleShutdown = async (signal) => {
+    console.log(`\nReceived ${signal}. Gracefully shutting down...`);
+    server.close(async () => {
+      if (clientPromise) {
+        try {
+          const client = await clientPromise;
+          await client.close();
+          console.log("MongoDB connection closed.");
+        } catch (err) {
+          console.error("Error closing MongoDB connection:", err.message);
+        }
+      }
+      process.exit(0);
+    });
+  };
+
+  process.on("SIGINT", () => handleShutdown("SIGINT"));
+  process.on("SIGTERM", () => handleShutdown("SIGTERM"));
 }
