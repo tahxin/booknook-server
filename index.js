@@ -13,6 +13,9 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.DB_NAME || "booknook";
 const BETTER_AUTH_URL = (process.env.BETTER_AUTH_URL || "http://localhost:3000").replace(/\/$/, "");
+const BORROW_DAYS = parseInt(process.env.BORROW_DAYS || "14", 10);
+
+export const ALLOWED_CATEGORIES = ["Fiction", "Science", "History", "Kids", "Others"];
 
 const rawOrigins = (process.env.CLIENT_ORIGIN || "")
   .split(",")
@@ -22,7 +25,7 @@ const rawOrigins = (process.env.CLIENT_ORIGIN || "")
 const allowedOrigins = Array.from(new Set(["http://localhost:3000", ...rawOrigins]));
 
 // ==========================================
-// 3. HttpError class
+// 3. HttpError class and small helpers
 // ==========================================
 export class HttpError extends Error {
   constructor(status, message) {
@@ -31,6 +34,21 @@ export class HttpError extends Error {
     this.name = "HttpError";
   }
 }
+
+export function parseObjectId(id, entityName = "book") {
+  if (!id || typeof id !== "string" || !ObjectId.isValid(id) || String(new ObjectId(id)) !== String(id)) {
+    throw new HttpError(400, `Invalid ${entityName} id`);
+  }
+  return new ObjectId(id);
+}
+
+export function escapeRegex(text) {
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+}
+
+export const asyncHandler = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
 
 // ==========================================
 // 4. Mongo connection (cached client) and ensureIndexes
@@ -130,6 +148,27 @@ app.use(express.json({ limit: "100kb" }));
 // Sanity route
 app.get("/", (_req, res) => {
   res.json({ message: "BookNook API is running" });
+});
+
+// ==========================================
+// 9. notFound and errorHandler
+// ==========================================
+app.use((_req, _res, next) => {
+  next(new HttpError(404, "Route not found"));
+});
+
+app.use((err, _req, res, _next) => {
+  if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
+    return res.status(400).json({ message: "Invalid JSON body" });
+  }
+  if (err instanceof HttpError) {
+    return res.status(err.status).json({ message: err.message });
+  }
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({ message: "Not allowed by CORS" });
+  }
+  console.error("Unhandled Server Error:", err.message);
+  return res.status(500).json({ message: "Something went wrong" });
 });
 
 // ==========================================
