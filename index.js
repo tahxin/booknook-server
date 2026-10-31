@@ -20,9 +20,28 @@ const rawOrigins = (process.env.CLIENT_ORIGIN || "")
 const allowedOrigins = Array.from(new Set(["http://localhost:3000", ...rawOrigins]));
 
 // ==========================================
-// 4. Mongo connection (cached client)
+// 4. Mongo connection (cached client) and ensureIndexes
 // ==========================================
 let clientPromise = null;
+let indexesPromise = null;
+
+export async function ensureIndexes(db) {
+  if (!indexesPromise) {
+    indexesPromise = (async () => {
+      const books = db.collection("books");
+      const borrows = db.collection("borrows");
+
+      await Promise.all([
+        books.createIndex({ createdAt: -1 }),
+        books.createIndex({ ownerEmail: 1 }),
+        books.createIndex({ category: 1 }),
+        borrows.createIndex({ bookId: 1, userEmail: 1 }, { unique: true }),
+        borrows.createIndex({ userEmail: 1, borrowDate: -1 }),
+      ]);
+    })();
+  }
+  return indexesPromise;
+}
 
 export async function getDb() {
   if (!MONGODB_URI) {
@@ -33,7 +52,9 @@ export async function getDb() {
     clientPromise = client.connect();
   }
   const client = await clientPromise;
-  return client.db(DB_NAME);
+  const db = client.db(DB_NAME);
+  await ensureIndexes(db);
+  return db;
 }
 
 // ==========================================
