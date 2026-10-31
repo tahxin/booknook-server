@@ -1,0 +1,83 @@
+### BookNook REST API Client Requests
+
+@baseUrl = http://localhost:5000
+@token = your_better_auth_jwt_token_here
+@bookId = 507f1f77bcf86cd799439011
+@borrowId = 507f1f77bcf86cd799439012
+
+### 0. Health / Sanity Check
+GET {{baseUrl}}/
+Accept: application/json
+
+### 1. Get All Books (Public)
+GET {{baseUrl}}/books
+Accept: application/json
+
+### 1a. Get New Arrivals (Limit 6, Newest First)
+GET {{baseUrl}}/books?sort=newest&limit=6
+Accept: application/json
+
+### 1b. Filter Books by Category
+GET {{baseUrl}}/books?category=Fiction
+Accept: application/json
+
+### 1c. Search Books by Title or Author
+GET {{baseUrl}}/books?search=Paper
+Accept: application/json
+
+### 1d. Get Books by Owner Email
+GET {{baseUrl}}/books?ownerEmail=you@example.com
+Accept: application/json
+
+### 2. Get Single Book by ID (Protected)
+GET {{baseUrl}}/books/{{bookId}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 3. Create a New Book (Protected)
+POST {{baseUrl}}/books
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Salt & Paper",
+  "author": "A. Rahman",
+  "category": "Fiction",
+  "image": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800",
+  "description": "A quiet novel about two siblings who inherit a failing print shop and uncover letters tucked into its walls.",
+  "totalCopies": 5
+}
+
+### 4. Update an Existing Book (Protected, Owner Only)
+PATCH {{baseUrl}}/books/{{bookId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "totalCopies": 6,
+  "description": "Updated book description with additional notes and revised print details."
+}
+
+### 5. Delete a Book (Protected, Owner Only, Non-Borrowed)
+DELETE {{baseUrl}}/books/{{bookId}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 6. Borrow a Book (Protected)
+POST {{baseUrl}}/borrows
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "bookId": "{{bookId}}"
+}
+
+### 7. Get My Borrows (Protected)
+GET {{baseUrl}}/borrows
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 8. Return a Borrowed Book (Protected)
+DELETE {{baseUrl}}/borrows/{{borrowId}}
+Authorization: Bearer {{token}}
+Accept: application/json
