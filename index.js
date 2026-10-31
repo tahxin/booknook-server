@@ -46,6 +46,57 @@ export function escapeRegex(text) {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
 }
 
+export function validateBookFields(data, isUpdate = false) {
+  if (!isUpdate || data.title !== undefined) {
+    if (typeof data.title !== "string" || !data.title.trim()) {
+      throw new HttpError(400, "Title is required and must be a non-empty string");
+    }
+    const t = data.title.trim();
+    if (t.length < 1 || t.length > 120) {
+      throw new HttpError(400, "Title must be between 1 and 120 characters");
+    }
+  }
+
+  if (!isUpdate || data.author !== undefined) {
+    if (typeof data.author !== "string" || !data.author.trim()) {
+      throw new HttpError(400, "Author is required and must be a non-empty string");
+    }
+    const a = data.author.trim();
+    if (a.length < 1 || a.length > 80) {
+      throw new HttpError(400, "Author must be between 1 and 80 characters");
+    }
+  }
+
+  if (!isUpdate || data.category !== undefined) {
+    if (!ALLOWED_CATEGORIES.includes(data.category)) {
+      throw new HttpError(400, `Category must be one of: ${ALLOWED_CATEGORIES.join(", ")}`);
+    }
+  }
+
+  if (!isUpdate || data.image !== undefined) {
+    if (typeof data.image !== "string" || !/^https?:\/\/.+/i.test(data.image.trim())) {
+      throw new HttpError(400, "Image must be a valid http or https URL");
+    }
+  }
+
+  if (!isUpdate || data.description !== undefined) {
+    if (typeof data.description !== "string" || !data.description.trim()) {
+      throw new HttpError(400, "Description is required and must be a non-empty string");
+    }
+    const d = data.description.trim();
+    if (d.length < 1 || d.length > 1000) {
+      throw new HttpError(400, "Description must be between 1 and 1000 characters");
+    }
+  }
+
+  if (!isUpdate || data.totalCopies !== undefined) {
+    const parsed = Number(data.totalCopies);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 1000) {
+      throw new HttpError(400, "Total copies must be an integer between 1 and 1000");
+    }
+  }
+}
+
 export const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
@@ -220,6 +271,35 @@ app.get(
       throw new HttpError(404, "Book not found");
     }
     res.json(book);
+  })
+);
+
+// 3. POST /books (JWT)
+app.post(
+  "/books",
+  verifyJwt,
+  asyncHandler(async (req, res) => {
+    const { title, author, category, image, description, totalCopies } = req.body || {};
+    validateBookFields({ title, author, category, image, description, totalCopies }, false);
+
+    const parsedCopies = parseInt(totalCopies, 10);
+    const newBook = {
+      title: title.trim(),
+      author: author.trim(),
+      category,
+      image: image.trim(),
+      description: description.trim(),
+      totalCopies: parsedCopies,
+      availableCopies: parsedCopies,
+      ownerName: req.user.name || "",
+      ownerEmail: req.user.email,
+      createdAt: new Date(),
+    };
+
+    const db = await getDb();
+    const result = await db.collection("books").insertOne(newBook);
+    const createdBook = await db.collection("books").findOne({ _id: result.insertedId });
+    res.status(201).json(createdBook);
   })
 );
 
