@@ -568,7 +568,7 @@ app.use((err, _req, res, _next) => {
 // ==========================================
 export default app;
 
-if (!process.env.VERCEL) {
+if (!process.env.VERCEL && process.env.NODE_ENV !== "test") {
   const PORT = process.env.PORT || 5000;
   const server = app.listen(PORT, () => {
     console.log(`BookNook API running on port ${PORT}`);
