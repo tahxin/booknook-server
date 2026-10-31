@@ -21,8 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `GET /borrows` for caller-specific borrow tracking.
   - `DELETE /borrows/:id` for book returns with inventory restoration.
 - Custom security response headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy).
-- Local automated test runner suite with 10 unit and route tests (`npm test`).
 - Cross-platform formatting consistency with `.editorconfig`.
-- GitHub Actions automated CI testing workflow.
 - Interactive `requests.http` REST testing file.
 

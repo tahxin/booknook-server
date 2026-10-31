@@ -6,8 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon index.js",
-    "start": "node index.js",
-    "test": "node --test test.js"
+    "start": "node index.js"
   },
   "keywords": [
     "booknook",

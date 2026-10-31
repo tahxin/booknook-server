@@ -83,12 +83,7 @@ npm run dev
 
 The API will be available at `http://localhost:5000`.
 
-### 4. Run test suite
-```bash
-npm test
-```
-
-### 5. Run production server
+### 4. Run production server
 ```bash
 npm start
 ```

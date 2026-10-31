@@ -18,7 +18,7 @@ const rawOrigins = (process.env.CLIENT_ORIGIN || "")
 
 const allowedOrigins = Array.from(new Set(["http://localhost:3000", ...rawOrigins]));
 
-if (!MONGODB_URI && !process.env.VERCEL && process.env.NODE_ENV !== "test") {
+if (!MONGODB_URI && !process.env.VERCEL) {
   console.warn("⚠️ [BookNook Server] Warning: MONGODB_URI is not set in environment.");
 }
 
@@ -180,7 +180,7 @@ app.use((req, res, next) => {
   const start = Date.now();
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (!process.env.VERCEL && process.env.NODE_ENV !== "test") {
+    if (!process.env.VERCEL) {
       console.log(`[${req.method}] ${req.originalUrl || req.url} -> ${res.statusCode} (${duration}ms)`);
     }
   });
@@ -516,7 +516,7 @@ app.use((err, _req, res, _next) => {
 
 export default app;
 
-if (!process.env.VERCEL && process.env.NODE_ENV !== "test") {
+if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 5000;
   const server = app.listen(PORT, () => {
     console.log(`BookNook API running on port ${PORT}`);
