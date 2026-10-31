@@ -186,6 +186,18 @@ app.use((_req, res, next) => {
   next();
 });
 
+// Request timing and development logging
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (!process.env.VERCEL && process.env.NODE_ENV !== "test") {
+      console.log(`[${req.method}] ${req.originalUrl || req.url} -> ${res.statusCode} (${duration}ms)`);
+    }
+  });
+  next();
+});
+
 app.use(
   cors({
     origin: (origin, callback) => {
