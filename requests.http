@@ -1,6 +1,7 @@
 ### BookNook REST API Client Requests
 
-@baseUrl = http://localhost:5000
+# @baseUrl = http://localhost:5000
+@baseUrl = https://booknook-server-pi.vercel.app
 @token = your_better_auth_jwt_token_here
 @bookId = 507f1f77bcf86cd799439011
 @borrowId = 507f1f77bcf86cd799439012
