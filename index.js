@@ -9,7 +9,15 @@ const DB_NAME = process.env.DB_NAME || "booknook";
 const BETTER_AUTH_URL = (process.env.BETTER_AUTH_URL || "http://localhost:3000").replace(/\/$/, "");
 const BORROW_DAYS = parseInt(process.env.BORROW_DAYS || "14", 10);
 
-export const ALLOWED_CATEGORIES = ["Fiction", "Science", "History", "Kids", "Others"];
+export const ALLOWED_CATEGORIES = [
+  "Fiction",
+  "Non-Fiction",
+  "Novel",
+  "Science",
+  "History",
+  "Kids",
+  "Others",
+];
 
 const rawOrigins = (process.env.CLIENT_ORIGIN || "")
   .split(",")
