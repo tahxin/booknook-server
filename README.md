@@ -2,6 +2,7 @@
 
 BookNook is a modern online library management platform: *add a book, borrow a book, return a book*. This repository contains the backend REST API built with Express.js and the native MongoDB driver, deployed on Vercel.
 
+- **Server Repository**: [https://github.com/tahxin/booknook-server](https://github.com/tahxin/booknook-server)
 - **Client Repository**: [BookNook Client](https://github.com/tahxin/booknook-client)
 - **Live Client URL**: [https://booknook-client-one.vercel.app](https://booknook-client-one.vercel.app)
 - **Live API URL**: [https://booknook-server-pi.vercel.app](https://booknook-server-pi.vercel.app)
@@ -68,7 +69,7 @@ In production on Vercel, set `CLIENT_ORIGIN` and `BETTER_AUTH_URL` to your live 
 
 ### 1. Clone the repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/tahxin/booknook-server.git
 cd booknook-server
 ```
 
