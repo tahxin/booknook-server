@@ -74,8 +74,8 @@ export function validateBookFields(data, isUpdate = false) {
   }
 
   if (!isUpdate || data.image !== undefined) {
-    if (typeof data.image !== "string" || !/^https?:\/\/.+/i.test(data.image.trim())) {
-      throw new HttpError(400, "Image must be a valid http or https URL");
+    if (typeof data.image !== "string" || !/^(https?:\/\/|data:image\/).+/i.test(data.image.trim())) {
+      throw new HttpError(400, "Image must be a valid http, https, or data image URL");
     }
   }
 
